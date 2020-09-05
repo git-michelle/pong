@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pong</title>
+
+    <style>
+      h1 {
+        font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+        margin-left: 380px;
+        color: white;
+      }
+      body {
+        background-color: brown;
+        margin: 0;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <br />
+    <h1>PONG</h1>
+
+    <canvas id="gameCanvas" width="800px" height="600px"> </canvas>
+
+    <script>
+      let canvas;
+      let canvasContext;
+      //   ball position + speed global var for increment to update each interval
+
+      let ballPositionX = 50;
+      let ballSpeedX = 15;
+      let ballPositionY = 50;
+      let ballSpeedY = 4;
+      const WINNING_SCORE = 3;
+      let showWinScreen = false;
+
+      let player1Score = 0;
+      let player2Score = 0;
+
+      let paddle1Y = 250;
+      let paddle2Y = 250;
+      const PADDLE_HEIGHT = 100;
+      const PADDLE_WIDTH = 10;
+
+      function calculateMousePos(event) {
+        let rect = canvas.getBoundingClientRect();
+        let root = document.documentElement;
+        let mouseX = event.clientX - rect.left - root.scrollLeft;
+        let mouseY = event.clientY - rect.top - root.scrollTop;
+        return {
+          x: mouseX,
+          y: mouseY,
+        };
+      }
+
+      //When window loads
+      window.onload = function () {
+        console.log("howdy");
+        canvas = document.getElementById("gameCanvas");
+        canvasContext = canvas.getContext("2d");
+
+        let framesPerSecond = 30;
+        // auto move ball every x interval in ms
+        setInterval(function () {
+          moveEverything();
+          drawEverything();
+          makeCircle();
+        }, 1000 / framesPerSecond);
+
+        // play again on mouse click
+        canvas.addEventListener("mousedown", function (event) {
+          if (showWinScreen) {
+            player1Score = 0;
+            player2Score = 0;
+            showWinScreen = false;
+          }
+        });
+
+        // move paddle using mouse
+
+        canvas.addEventListener("mousemove", function (event) {
+          let mousePos = calculateMousePos(event);
+          paddle1Y = mousePos.y - PADDLE_HEIGHT / 2;
+        });
+      };
+
+      //reset ball if missed
+      function ballReset() {
+        if (player1Score >= WINNING_SCORE || player2Score >= WINNING_SCORE) {
+          showWinScreen = true;
+        }
+        ballSpeedX = -ballSpeedX;
+        ballPositionX = canvas.width / 2;
+        ballPositionY = canvas.height / 2;
+      }
+
+      function computerMovement() {
+        //move paddle
+        let paddle2YCenter = paddle2Y + PADDLE_HEIGHT / 2;
+
+        //move paddle based on ball position
+        if (paddle2YCenter < ballPositionY - 40) {
+          paddle2Y += 6;
+        } else if (paddle2YCenter > ballPositionY + 40) {
+          paddle2Y -= 6;
+        }
+      }
+      function moveEverything() {
+        // exit / return if win score reached
+        if (showWinScreen === true) {
+          return;
+        }
+
+        //start computer movement
+        computerMovement();
+
+        ballPositionX = ballPositionX + ballSpeedX;
+        ballPositionY = ballPositionY + ballSpeedY;
+
+        // horizontal movement
+        //reset if hits left side and give right player a point
+        if (ballPositionX < 0) {
+          if (
+            ballPositionY > paddle1Y &&
+            ballPositionY < paddle1Y + PADDLE_HEIGHT
+          ) {
+            ballSpeedX = -ballSpeedX;
+          } else {
+            ballReset();
+            player2Score++;
+          }
+        }
+        // horizontal movement
+        if (ballPositionX > canvas.width) {
+          if (
+            ballPositionY > paddle2Y &&
+            ballPositionY < paddle2Y + PADDLE_HEIGHT
+          ) {
+            ballSpeedX = -ballSpeedX;
+          } else {
+            ballReset();
+            player1Score++;
+          }
+        }
+
+        //   vertical movement
+        if (ballPositionY < 0) {
+          ballSpeedY = -ballSpeedY;
+        }
+        if (ballPositionY > canvas.height) {
+          ballSpeedY = -ballSpeedY;
+        }
+      }
+
+      function drawNet() {
+        for (let i = 10; i < canvas.height; i += 40) {
+          colorRect(canvas.width / 2 - 1, i, 2, 20, "white");
+        }
+      }
+
+      function drawEverything() {
+        colorRect(0, 0, canvas.width, canvas.height, "#54a011");
+        // x axis, y axis, width, height
+
+        // exit / return if win score reached, below canvas^^ so it can still be used
+        if (showWinScreen === true) {
+          canvasContext.fillStyle = "white";
+
+          if (player1Score >= WINNING_SCORE) {
+            canvasContext.fillText("Player 1 wins!", 400, 300);
+            showWinScreen = true;
+          } else if (player2Score >= WINNING_SCORE) {
+            canvasContext.fillText("Computer wins!", 400, 300);
+            showWinScreen = true;
+          }
+
+          canvasContext.fillText("Click to play again", 395, 330);
+          return;
+        }
+
+        drawNet();
+
+        // left player paddle
+        colorRect(0, paddle1Y, PADDLE_WIDTH, PADDLE_HEIGHT, "white");
+
+        // right computer paddle
+        colorRect(
+          canvas.width - PADDLE_WIDTH,
+          paddle2Y,
+          PADDLE_WIDTH,
+          PADDLE_HEIGHT,
+          "white"
+        );
+
+        //create ball
+        colorCircle(ballPositionX, ballPositionY, 10, "yellow");
+
+        // show scores on canvas
+        canvasContext.fillStyle = "white";
+        canvasContext.fillText(player1Score, 100, 100);
+        canvasContext.fillText(player2Score, canvas.width - 100, 100);
+      }
+
+      function colorCircle(centerX, centerY, radius, drawColor) {
+        canvasContext.fillStyle = drawColor;
+        canvasContext.beginPath();
+        //arc for making circle, math*pi makes half circle
+        canvasContext.arc(centerX, centerY, radius, 0, Math.PI * 2, true);
+        canvasContext.fill();
+      }
+
+      function colorRect(leftX, topY, width, height, drawColor) {
+        canvasContext.fillStyle = drawColor;
+        canvasContext.fillRect(leftX, topY, width, height);
+      }
+    </script>
+  </body>
+</html>
